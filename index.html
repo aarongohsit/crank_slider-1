@@ -65,13 +65,13 @@
   <!-- Grouped Link Dimensions -->
   <div class="group">
     <div class="group-title">Link Dimensions</div>
-    <label>Crank Radius (r)
+    <label>Crank Radius (r2)
       <input type="number" id="crankLen" value="200" step="5">
     </label>
-    <label>Connecting Rod (l)
+    <label>Connecting Rod (r3)
       <input type="number" id="rodLen" value="400" step="5">
     </label>
-    <label>Slider Offset (e)
+    <label>Slider Offset (r1)
       <input type="number" id="offset" value="0" step="5" min="0">
     </label>
   </div>
@@ -405,7 +405,7 @@ function draw() {
   ctx.moveTo(0, 0);
   ctx.lineTo(Bx, By);
   ctx.stroke();
-  drawUnrotatedText(`Crank (${crankDegGlobal.toFixed(0)}°)`, Bx / 2 - 15, By / 2 - 12, 'bold 18px sans-serif', '#f0b35a');
+  drawUnrotatedText(`Crank r2 (${crankDegGlobal.toFixed(0)}°)`, Bx / 2 - 15, By / 2 - 12, 'bold 18px sans-serif', '#f0b35a');
 
   // 6. Connecting Rod Link
   ctx.strokeStyle = '#4f74b8';
@@ -414,7 +414,7 @@ function draw() {
   ctx.moveTo(Bx, By);
   ctx.lineTo(Dx, Dy);
   ctx.stroke();
-  drawUnrotatedText(`Connecting Rod (${rodDegGlobal.toFixed(0)}°)`, (Bx + Dx) / 2, (By + Dy) / 2 - 14, '18px sans-serif', '#6ea8ff');
+  drawUnrotatedText(`Connecting Rod r3 (${rodDegGlobal.toFixed(0)}°)`, (Bx + Dx) / 2, (By + Dy) / 2 - 14, '18px sans-serif', '#6ea8ff');
 
   // 7. Transmission Angle Arc at Joint C/D
   ctx.strokeStyle = '#f0b35a';
