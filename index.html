@@ -2,520 +2,1440 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Crank Slider - Inversion 1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slider–Crank — Inversion 1 and Quick Return</title>
+
 <style>
-  body { margin: 0; background: #121826; color: #edf2ff; font-family: system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
-  #canvas-container { flex: 1; position: relative; }
-  canvas { width: 100%; height: 100%; display: block; cursor: grab; }
-  canvas:active { cursor: grabbing; }
-  .controls { width: 340px; background: #171d2b; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #242d42; overflow-y: auto; }
-  .group { background: #1f2636; padding: 12px; border-radius: 8px; border: 1px solid #2a3550; }
-  .group-title { font-weight: bold; margin-bottom: 8px; color: #4f74b8; font-size: 13px; text-transform: uppercase; }
-  label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
-  input[type="number"], input[type="range"], select { width: 100%; margin-top: 2px; background: #121826; border: 1px solid #35405c; color: #fff; padding: 5px; border-radius: 4px; box-sizing: border-box; }
-  .row { display: flex; gap: 6px; }
-  button { flex: 1; padding: 8px; background: #4f74b8; border: none; color: #fff; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
-  button:hover { background: #5b82cb; }
-  button.active { background: #f0b35a; }
-  button.secondary { background: #2a3550; }
-  button.secondary:hover { background: #39476b; }
-  button.danger { background: #9b4a59; }
-  button.danger:hover { background: #b85869; }
-  .toggle-btn { background: #243147; border: 1px solid #35405c; color: #9fb0d3; padding: 3px 6px; font-size: 10px; border-radius: 4px; flex: 0; cursor: pointer; }
-  .toggle-btn:hover { background: #324361; }
-  .toggle-btn.off { color: #606b82; background: #171d2b; text-decoration: line-through; }
-  .status { font-size: 12px; color: #58d19f; margin-top: 4px; }
-  .status.error { color: #f26d7d; }
-  .readouts { font-size: 12px; font-family: monospace; display: flex; flex-direction: column; gap: 3px; }
-  .coupler-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-  .coupler-item { background: #121826; border: 1px solid #2a3550; padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 11px; }
+:root {
+  color-scheme: dark;
+  --bg: #121826;
+  --panel: #171d2b;
+  --group: #1f2636;
+  --border: #35405c;
+  --text: #edf2ff;
+  --muted: #aab8d4;
+  --amber: #f0b35a;
+  --green: #58d19f;
+  --blue: #6ea8ff;
+  --red: #f26d7d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+#canvas-container {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+#scene {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+#scene:active { cursor: grabbing; }
+
+.scene-help {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  color: var(--muted);
+  background: rgba(18,24,38,.85);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.controls {
+  width: 370px;
+  flex-shrink: 0;
+  padding: 16px;
+  background: var(--panel);
+  border-left: 1px solid #242d42;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+h3 { margin: 0; font-size: 18px; }
+
+.group {
+  padding: 12px;
+  background: var(--group);
+  border: 1px solid #2a3550;
+  border-radius: 8px;
+}
+
+.group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 10px;
+}
+
+label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+input[type="number"], select {
+  width: 125px;
+  padding: 6px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+input[type="range"] { width: 100%; }
+
+.stack {
+  display: block;
+}
+
+.stack input[type="range"] { margin-top: 8px; }
+
+.row {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  background: #4f74b8;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+button:hover { filter: brightness(1.15); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+button.secondary { background: #2a3550; }
+button.danger { background: #9b4a59; }
+button.active { background: #92651f; }
+
+.note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
+.readouts {
+  font: 11px/1.8 ui-monospace, monospace;
+}
+
+.status {
+  color: var(--green);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status.error { color: var(--red); }
+
+.q-value {
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.2;
+  margin: 4px 0 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+th, td {
+  text-align: right;
+  padding: 6px 3px;
+  border-bottom: 1px solid var(--border);
+}
+
+th:first-child, td:first-child { text-align: left; }
+
+.check {
+  justify-content: flex-start;
+  margin-top: 9px;
+  color: var(--muted);
+}
+
+.panel-canvas {
+  display: block;
+  width: 100%;
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+#angleCircle { height: 290px; }
+#motionPlot { height: 190px; }
+
+.coupler-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.coupler-item {
+  background: var(--bg);
+  padding: 8px;
+  border: 1px solid #2a3550;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.coupler-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+
+.coupler-head span { flex: 1; font-weight: 700; }
+.coupler-head button { flex: 0 0 auto; padding: 4px 7px; }
+
+.coupler-item label { font-size: 11px; margin-bottom: 5px; }
+.coupler-item input { width: 100px; }
+
+@media (max-width: 760px) {
+  body { flex-direction: column; }
+  #canvas-container { flex: none; height: 48dvh; }
+  .controls {
+    width: 100%;
+    flex: 1;
+    border-left: none;
+    border-top: 1px solid #242d42;
+  }
+}
 </style>
 </head>
-<body>
 
+<body>
 <div id="canvas-container">
-  <canvas id="scene"></canvas>
+  <canvas id="scene" aria-label="Interactive slider–crank mechanism"></canvas>
+  <div class="scene-help">
+    Drag to pan · Wheel to zoom · Angles positive counterclockwise
+  </div>
 </div>
 
-<div class="controls">
-  <h3 style="margin: 0 0 5px 0;">Inversion 1 Controls</h3>
+<aside class="controls">
+  <h3>Slider–Crank: Inversion 1</h3>
 
-  <!-- View Controls -->
-  <div class="group">
+  <section class="group">
     <div class="group-title">View</div>
     <div class="row">
-      <button id="resetPanBtn" class="secondary">Reset Pan/Zoom</button>
+      <button id="fitView" class="secondary">Fit mechanism</button>
+      <button id="resetView" class="secondary">Reset view</button>
     </div>
-  </div>
-
-  <!-- Ground Orientation Settings -->
-  <div class="group">
-    <div class="group-title">Ground Setup</div>
-    <label>Ground Angle (deg)
-      <input type="number" id="groundAngle" value="0" step="1">
+    <label class="check">
+      <input type="checkbox" id="showLimits" checked>
+      Show limiting configurations
     </label>
-    <label style="flex-direction: column; align-items: flex-start;">Offset Direction
-      <select id="offsetAngleSelect">
-        <option value="90">Ground Angle + 90°</option>
-        <option value="270" selected>Ground Angle + 270°</option>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Geometry</div>
+
+    <label>
+      Ground / guide angle θ₄ (°)
+      <input id="groundAngle" type="number" value="0" step="1">
+    </label>
+
+    <label>
+      Crank radius r₂
+      <input id="crankLen" type="number" value="200" min="0.1" step="5">
+    </label>
+
+    <label>
+      Connecting rod r₃
+      <input id="rodLen" type="number" value="400" min="0.1" step="5">
+    </label>
+
+    <label>
+      Signed offset r₁
+      <input id="offset" type="number" value="50" step="5">
+    </label>
+
+    <p class="note">
+      Positive offset: ground angle + 90°.
+      Negative offset: ground angle − 90°.
+      Zero offset: in-line mechanism.
+      Lengths use a consistent arbitrary distance unit.
+    </p>
+
+    <div class="row">
+      <button id="inlinePreset" class="secondary">In-line</button>
+      <button id="sheetPreset" class="secondary">Excel example ×100</button>
+    </div>
+    <div class="row">
+      <button id="offsetPreset" class="secondary">Larger offset</button>
+      <button id="flipOffset" class="secondary">Reverse offset</button>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Crank input</div>
+
+    <label class="stack">
+      Crank angle θ₂ relative to guide:
+      <span id="angleLabel">80.00°</span>
+      <input id="crankAngle" type="range"
+             min="0" max="360" step="0.01" value="80">
+    </label>
+
+    <label>
+      Constant crank speed (rpm)
+      <input id="rpm" type="number" value="6"
+             min="0.1" max="120" step="0.5">
+    </label>
+
+    <label>
+      Crank rotation
+      <select id="direction">
+        <option value="1">Counterclockwise</option>
+        <option value="-1">Clockwise</option>
       </select>
     </label>
-  </div>
 
-  <!-- Grouped Link Dimensions -->
-  <div class="group">
-    <div class="group-title">Link Dimensions</div>
-    <label>Crank Radius (r2)
-      <input type="number" id="crankLen" value="200" step="5">
-    </label>
-    <label>Connecting Rod (r3)
-      <input type="number" id="rodLen" value="400" step="5">
-    </label>
-    <label>Slider Offset (r1)
-      <input type="number" id="offset" value="0" step="5" min="0">
-    </label>
-  </div>
-
-  <!-- Coupler Points Panel -->
-  <div class="group">
-    <div class="group-title">Coupler Points (Max 5)</div>
     <div class="row">
-      <button id="addCouplerBtn" class="secondary">+ Add Point</button>
-      <button id="clearCouplersBtn" class="danger">Clear All</button>
+      <button id="play">Play animation</button>
     </div>
-    <div id="couplerContainer" class="coupler-list"></div>
-  </div>
+    <div class="row">
+      <button id="goExtended" class="secondary">Go to extended</button>
+      <button id="goFolded" class="secondary">Go to folded</button>
+    </div>
+  </section>
 
-  <!-- Animation & Input -->
-  <div class="group">
-    <div class="group-title">Kinematics</div>
-    <label>Crank Angle (deg)
-      <input type="range" id="crankAngle" min="0" max="360" value="45">
-    </label>
-    <button id="togglePlay">Play Animation</button>
-  </div>
+  <section class="group">
+    <div class="group-title">Quick return — spreadsheet notation</div>
 
-  <!-- Live Kinematic Data -->
-  <div class="group">
+    <div class="note">Q = slow-stroke time / fast-stroke time</div>
+    <div id="qValue" class="q-value">—</div>
+    <div id="phase" class="status">—</div>
+
+    <canvas id="angleCircle" class="panel-canvas"
+            aria-label="Two-colour crank-angle distribution"></canvas>
+
+    <div class="readouts">
+      <div>q, extended: <span id="qExt">—</span></div>
+      <div>q, folded: <span id="qFold">—</span></div>
+      <div>Imbalance angle δ: <span id="delta">—</span></div>
+      <div>θ₂, extended: <span id="thetaExt">—</span></div>
+      <div>θ₂, folded: <span id="thetaFold">—</span></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Slider stroke</th><th>Crank sweep</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>+r₄: F → E</td>
+          <td id="outSweep">—</td>
+          <td id="outTime">—</td>
+        </tr>
+        <tr>
+          <td>−r₄: E → F</td>
+          <td id="inSweep">—</td>
+          <td id="inTime">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="note">
+      E = extended; F = folded.
+      Amber = slower stroke; green = faster stroke.
+      Blue = equal stroke times.
+      The crank rotates continuously in the selected direction;
+      the slider reverses direction.
+    </p>
+
+    <p class="note">
+      q values use the offset magnitude.
+      θ₂ limiting angles are global angles measured from the
+      horizontal. The input slider is relative to θ₄.
+    </p>
+
+    <p class="note">
+      δ = q<sub>folded</sub> − q<sub>extended</sub><br>
+      Q = (180° + δ) / (180° − δ)
+    </p>
+  </section>
+
+  <section class="group">
+    <div class="group-title">Displacement–time diagram</div>
+    <canvas id="motionPlot" class="panel-canvas"
+            aria-label="Slider displacement versus time"></canvas>
+    <p class="note">
+      One cycle starts at the folded position and follows the
+      selected crank rotation. White dot = current position.
+      Displacement is measured from the folded position.
+    </p>
+  </section>
+
+  <section class="group">
     <div class="group-title">Measurements</div>
     <div class="readouts">
-      <div>Crank Angle: <span id="outCrankAng">0</span>°</div>
-      <div>Rod Angle: <span id="outRodAng">0</span>°</div>
-      <div>Transmission Angle (γ): <span id="outTransAng">0</span>°</div>
-      <div>Actual Rod Length: <span id="outRodLen">0</span> px</div>
-      <div>Stroke Range: <span id="outStroke">0</span> px</div>
+      <div>θ₂, global: <span id="outCrank">—</span></div>
+      <div>θ₃, global: <span id="outRod">—</span></div>
+      <div>Transmission angle γ: <span id="outGamma">—</span></div>
+      <div>Actual rod length: <span id="outRodLength">—</span></div>
+      <div>Slider position r₄: <span id="outPosition">—</span></div>
+      <div>r₄,min: <span id="outMinimum">—</span></div>
+      <div>Stroke: <span id="outStroke">—</span></div>
+      <div>Cycle period: <span id="outPeriod">—</span></div>
     </div>
-  </div>
+    <p class="note">
+      γ uses the spreadsheet’s 0–180° convention:
+      acos[(r₂ sin(θ₂ − θ₄) − r₁)/r₃].
+      It is not restricted to an acute angle.
+    </p>
+  </section>
 
-  <div id="status" class="status">System Status: OK</div>
-</div>
+  <section class="group">
+    <div class="group-title">Coupler points — maximum 5</div>
+    <div class="row">
+      <button id="addCoupler" class="secondary">+ Add point</button>
+      <button id="clearCouplers" class="danger">Clear all</button>
+    </div>
+    <div id="couplerList" class="coupler-list"></div>
+    <p class="note">
+      Distance is measured from B.
+      Point angle is counterclockwise from link B → C,
+      consistent with θ₃ + point angle.
+    </p>
+  </section>
+
+  <div id="status" class="status"></div>
+</aside>
 
 <script>
-const canvas = document.getElementById('scene');
-const ctx = canvas.getContext('2d');
+'use strict';
 
-// UI Controls
-const groundAngleInput = document.getElementById('groundAngle');
-const offsetAngleSelect = document.getElementById('offsetAngleSelect');
-const crankLenInput = document.getElementById('crankLen');
-const rodLenInput = document.getElementById('rodLen');
-const offsetInput = document.getElementById('offset');
-const crankAngleInput = document.getElementById('crankAngle');
-const togglePlayBtn = document.getElementById('togglePlay');
-const resetPanBtn = document.getElementById('resetPanBtn');
-const addCouplerBtn = document.getElementById('addCouplerBtn');
-const clearCouplersBtn = document.getElementById('clearCouplersBtn');
-const couplerContainer = document.getElementById('couplerContainer');
-const statusEl = document.getElementById('status');
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+const rad = d => d * Math.PI / 180;
+const deg = r => r * 180 / Math.PI;
+const wrap = (a, period = TAU) => ((a % period) + period) % period;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-// Readouts
-const outCrankAng = document.getElementById('outCrankAng');
-const outRodAng = document.getElementById('outRodAng');
-const outTransAng = document.getElementById('outTransAng');
-const outRodLen = document.getElementById('outRodLen');
-const outStroke = document.getElementById('outStroke');
+const colours = {
+  amber: '#f0b35a',
+  green: '#58d19f',
+  blue: '#6ea8ff',
+  red: '#f26d7d',
+  text: '#edf2ff',
+  muted: '#aab8d4',
+  guide: '#53617c',
+  background: '#121826'
+};
 
-// Interaction & State Variables
-let isPlaying = false;
-let animId = null;
-let panX = 0, panY = 0;
-let isPanning = false, startPanX = 0, startPanY = 0;
+const scene = $('scene');
+const ctx = scene.getContext('2d');
+const circle = $('angleCircle');
+const circleCtx = circle.getContext('2d');
+const plot = $('motionPlot');
+const plotCtx = plot.getContext('2d');
 
-const getPointName = (idx) => String.fromCharCode(69 + idx);
-const couplerColors = ['#e74c3c', '#9b59b6', '#2ecc71', '#e67e22', '#1abc9c'];
-let couplerPoints = [];
+const state = {
+  panX: 0,
+  panY: 0,
+  zoom: 1,
+  playing: false,
+  lastTime: null,
+  animation: null,
+  pointer: null,
+  couplers: []
+};
 
-function resize() {
-  canvas.width = canvas.parentElement.clientWidth;
-  canvas.height = canvas.parentElement.clientHeight;
-  draw();
-}
-window.addEventListener('resize', resize);
+const couplerColours = [
+  '#ff7676', '#c492ff', '#59df9c', '#ffac67', '#40d5d0'
+];
 
-function solveLocalKinematics(crankR, rodL, offsetE, offsetAngleRad, crankRad) {
-  const Bx = crankR * Math.cos(crankRad);
-  const By = -crankR * Math.sin(crankRad);
-
-  const P1x = offsetE * Math.cos(offsetAngleRad);
-  const P1y = -offsetE * Math.sin(offsetAngleRad);
-
-  const dirX = 1;
-  const dirY = 0;
-
-  const dx = P1x - Bx;
-  const dy = P1y - By;
-
-  const a = 1; 
-  const b = 2 * (dx * dirX + dy * dirY);
-  const c = (dx * dx + dy * dy) - (rodL * rodL);
-
-  const disc = b * b - 4 * a * c;
-  if (disc < 0) return null;
-
-  const t = (-b + Math.sqrt(disc)) / (2 * a);
-
-  const Dx = P1x + t * dirX;
-  const Dy = P1y + t * dirY;
-
-  return { Bx, By, Dx, Dy, P1x, P1y, dPath: t };
-}
-
-function getCouplerPointPos(Bx, By, Dx, Dy, dist, angleDeg) {
-  const rodAngleLocal = Math.atan2(Dy - By, Dx - Bx);
-  const totalAngle = rodAngleLocal - (angleDeg * Math.PI / 180);
-
+function readParameters() {
   return {
-    x: Bx + dist * Math.cos(totalAngle),
-    y: By + dist * Math.sin(totalAngle)
+    r: Number($('crankLen').value),
+    l: Number($('rodLen').value),
+    h: Number($('offset').value),
+    ground: rad(Number($('groundAngle').value)),
+    theta: rad(Number($('crankAngle').value)),
+    rpm: Number($('rpm').value),
+    direction: Number($('direction').value)
   };
 }
 
-function drawUnrotatedText(text, localX, localY, font, fillStyle, textAlign = 'center', textBaseline = 'alphabetic') {
-  const groundRad = (parseFloat(groundAngleInput.value) || 0) * Math.PI / 180;
-  ctx.save();
-  ctx.translate(localX, localY);
-  ctx.rotate(groundRad);
-  ctx.font = font;
-  ctx.fillStyle = fillStyle;
-  ctx.textAlign = textAlign;
-  ctx.textBaseline = textBaseline;
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
+function solve(p, theta = p.theta) {
+  const bx = p.r * Math.cos(theta);
+  const by = p.r * Math.sin(theta);
+  const vertical = p.h - by;
+  const discriminant = p.l * p.l - vertical * vertical;
+  const tolerance = 1e-10 * Math.max(1, p.l * p.l);
+
+  if (discriminant < -tolerance) return null;
+
+  const x = bx + Math.sqrt(Math.max(0, discriminant));
+
+  return {
+    bx, by,
+    x,
+    y: p.h,
+    rodAngle: Math.atan2(p.h - by, x - bx)
+  };
 }
 
-function renderCouplerControls() {
-  couplerContainer.innerHTML = '';
-  couplerPoints.forEach((cp, idx) => {
-    const name = getPointName(idx);
-    const div = document.createElement('div');
-    div.className = 'coupler-item';
-    div.innerHTML = `
-      <span style="color:${couplerColors[idx % couplerColors.length]}; font-weight:bold;">Pt ${name}</span>
-      <button class="toggle-btn ${cp.showPath ? '' : 'off'}" data-toggle="${idx}">${cp.showPath ? 'Path On' : 'Path Off'}</button>
-      <label style="margin:0;">Dist B: <input type="number" step="5" value="${cp.dist}" style="width:40px" data-idx="${idx}" data-param="dist"></label>
-      <label style="margin:0;">∠ BC: <input type="number" step="5" value="${cp.angleDeg}" style="width:40px" data-idx="${idx}" data-param="angleDeg">°</label>
-      <button class="danger" style="padding:2px 6px; flex:0;" data-del="${idx}">X</button>
-    `;
-    couplerContainer.appendChild(div);
-  });
-  addCouplerBtn.disabled = couplerPoints.length >= 5;
+function analyse(p) {
+  if (![p.r, p.l, p.h, p.ground, p.theta, p.rpm]
+      .every(Number.isFinite)) {
+    return { valid: false, reason: 'Enter finite numeric values.' };
+  }
+
+  if (p.r <= 0 || p.l <= 0 || p.rpm <= 0) {
+    return {
+      valid: false,
+      reason: 'Crank length, rod length and rpm must be positive.'
+    };
+  }
+
+  if (p.l <= p.r + Math.abs(p.h)) {
+    return {
+      valid: false,
+      reason:
+        'For this non-singular, full-rotation demonstration, ' +
+        'use r₃ > r₂ + |r₁|. Restricted or singular geometry ' +
+        'does not have a valid full-cycle Q here.'
+    };
+  }
+
+  const qExt = Math.asin(Math.abs(p.h) / (p.l + p.r));
+  const qFold = Math.asin(Math.abs(p.h) / (p.l - p.r));
+  const delta = qFold - qExt;
+
+  const extended = wrap(Math.asin(p.h / (p.l + p.r)));
+  const folded = wrap(Math.PI + Math.asin(p.h / (p.l - p.r)));
+
+  const outwardSweep = wrap(p.direction * (extended - folded));
+  const inwardSweep = TAU - outwardSweep;
+  const period = 60 / p.rpm;
+
+  const minimum = Math.sqrt((p.l - p.r) ** 2 - p.h ** 2);
+  const maximum = Math.sqrt((p.l + p.r) ** 2 - p.h ** 2);
+
+  return {
+    valid: true,
+    qExt, qFold, delta, extended, folded,
+    outwardSweep, inwardSweep,
+    outwardTime: period * outwardSweep / TAU,
+    inwardTime: period * inwardSweep / TAU,
+    period, minimum, maximum,
+    stroke: maximum - minimum,
+    Q: (Math.PI + delta) / (Math.PI - delta),
+    equal: Math.abs(delta) < 1e-10,
+    outwardSlow: outwardSweep > inwardSweep
+  };
 }
 
-couplerContainer.addEventListener('input', (e) => {
-  const idx = e.target.getAttribute('data-idx');
-  const param = e.target.getAttribute('data-param');
-  if (idx !== null && param) {
-    couplerPoints[idx][param] = parseFloat(e.target.value) || 0;
-    draw();
+function phaseOf(p, a) {
+  const travel = wrap(p.direction * (p.theta - a.folded));
+  const atLimit =
+    Math.min(travel, TAU - travel) < 1e-5 ||
+    Math.abs(travel - a.outwardSweep) < 1e-5;
+
+  return {
+    travel,
+    outward: travel < a.outwardSweep,
+    atLimit
+  };
+}
+
+function strokeColour(outward, a) {
+  if (a.equal) return colours.blue;
+  return outward === a.outwardSlow ? colours.amber : colours.green;
+}
+
+function prepareCanvas(canvas, context) {
+  const width = Math.max(1, canvas.clientWidth);
+  const height = Math.max(1, canvas.clientHeight);
+  const dpr = window.devicePixelRatio || 1;
+
+  if (canvas.width !== Math.round(width * dpr) ||
+      canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
   }
-});
 
-couplerContainer.addEventListener('click', (e) => {
-  const delIdx = e.target.getAttribute('data-del');
-  const toggleIdx = e.target.getAttribute('data-toggle');
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.clearRect(0, 0, width, height);
+  return { width, height };
+}
 
-  if (delIdx !== null) {
-    couplerPoints.splice(parseInt(delIdx), 1);
-    renderCouplerControls();
-    draw();
-  } else if (toggleIdx !== null) {
-    const i = parseInt(toggleIdx);
-    couplerPoints[i].showPath = !couplerPoints[i].showPath;
-    renderCouplerControls();
-    draw();
+/* World coordinates: mathematical y upward, ground-local x along guide. */
+
+function toScreen(x, y, p, width, height) {
+  const cos = Math.cos(p.ground);
+  const sin = Math.sin(p.ground);
+  const gx = x * cos - y * sin;
+  const gy = x * sin + y * cos;
+
+  return {
+    x: width / 2 + state.panX + state.zoom * gx,
+    y: height / 2 + state.panY - state.zoom * gy
+  };
+}
+
+function drawMechanism(p, a) {
+  const { width, height } = prepareCanvas(scene, ctx);
+
+  if (![p.r, p.l, p.h, p.ground, p.theta].every(Number.isFinite) ||
+      p.r <= 0 || p.l <= 0) return;
+
+  const screen = (x, y) => toScreen(x, y, p, width, height);
+
+  function line(points, colour, thickness = 2, dash = []) {
+    ctx.beginPath();
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = thickness;
+    ctx.lineCap = 'round';
+    ctx.setLineDash(dash);
+
+    points.forEach(([x, y], index) => {
+      const s = screen(x, y);
+      if (index === 0) ctx.moveTo(s.x, s.y);
+      else ctx.lineTo(s.x, s.y);
+    });
+
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
-});
 
-addCouplerBtn.addEventListener('click', () => {
-  if (couplerPoints.length < 5) {
-    couplerPoints.push({ dist: 100, angleDeg: 30 * couplerPoints.length, showPath: true });
-    renderCouplerControls();
-    draw();
+  function text(label, x, y, colour = colours.text, dx = 0, dy = 0) {
+    const s = screen(x, y);
+    ctx.fillStyle = colour;
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, s.x + dx, s.y + dy);
   }
-});
 
-clearCouplersBtn.addEventListener('click', () => {
-  couplerPoints = [];
-  renderCouplerControls();
-  draw();
-});
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const groundDeg = parseFloat(groundAngleInput.value) || 0;
-  const offsetDeg = parseFloat(offsetAngleSelect.value) || 270;
-  const crankR = parseFloat(crankLenInput.value) || 0;
-  const rodL = parseFloat(rodLenInput.value) || 0;
-  const offsetE = Math.abs(parseFloat(offsetInput.value) || 0);
-  const crankDeg = parseFloat(crankAngleInput.value) || 0;
-
-  const groundRad = groundDeg * Math.PI / 180;
-  const offsetAngleRad = offsetDeg * Math.PI / 180;
-  const crankRad = crankDeg * Math.PI / 180;
-
-  const sol = solveLocalKinematics(crankR, rodL, offsetE, offsetAngleRad, crankRad);
-  if (!sol) {
-    statusEl.textContent = "Status: Crank position unachievable";
-    statusEl.className = "status error";
-    return;
+  function joint(x, y, colour, radius = 5) {
+    const s = screen(x, y);
+    ctx.beginPath();
+    ctx.fillStyle = colour;
+    ctx.arc(s.x, s.y, radius, 0, TAU);
+    ctx.fill();
   }
-  statusEl.textContent = "Status: OK";
-  statusEl.className = "status";
 
-  const { Bx, By, Dx, Dy, P1x, P1y, dPath } = sol;
+  const guideEnd = a.valid
+    ? a.maximum + p.r * .4
+    : p.r + p.l + Math.abs(p.h);
 
-  const actualRodLength = Math.hypot(Dx - Bx, Dy - By);
+  line(
+    [[-p.r * .5, p.h], [guideEnd, p.h]],
+    colours.guide, 2, [8, 6]
+  );
 
-  const strokeMin = Math.sqrt(Math.max(0, Math.pow(rodL - crankR, 2) - offsetE * offsetE));
-  const strokeMax = Math.sqrt(Math.max(0, Math.pow(rodL + crankR, 2) - offsetE * offsetE));
-  const strokeLength = strokeMax - strokeMin;
+  if (Math.abs(p.h) > 1e-9) {
+    line([[0, 0], [0, p.h]], colours.muted, 1, [4, 4]);
+    text(`r₁ = ${p.h.toFixed(1)}`, 0, p.h / 2, colours.muted, -48);
+  }
 
-  const xMinPt = { x: P1x + strokeMin, y: P1y };
-  const xMaxPt = { x: P1x + strokeMax, y: P1y };
+  if (a.valid) {
+    line(
+      [[a.minimum, p.h], [a.maximum, p.h]],
+      colours.red, 4
+    );
 
-  const rodRadLocal = Math.atan2(-(Dy - By), Dx - Bx);
-  const rodDegGlobal = ((rodRadLocal + groundRad) * 180 / Math.PI % 360 + 360) % 360;
-  const crankDegGlobal = ((crankDeg + groundDeg) % 360 + 360) % 360;
+    for (const x of [a.minimum, a.maximum]) {
+      line([[x, p.h - 8], [x, p.h + 8]], colours.red, 2);
+    }
 
-  // Transmission Angle Calculation: gamma = 90° - |rod_angle_relative_to_slider|
-  const beta = Math.abs(Math.asin((By - Dy) / rodL));
-  const transmissionAngleDeg = (90 - (beta * 180 / Math.PI));
+    text(
+      `Stroke = ${a.stroke.toFixed(2)}`,
+      (a.minimum + a.maximum) / 2, p.h,
+      colours.red, 0, 37
+    );
 
-  outCrankAng.textContent = crankDegGlobal.toFixed(1);
-  outRodAng.textContent = rodDegGlobal.toFixed(1);
-  outTransAng.textContent = transmissionAngleDeg.toFixed(1);
-  outRodLen.textContent = actualRodLength.toFixed(1);
-  outStroke.textContent = strokeLength.toFixed(1);
+    if ($('showLimits').checked) {
+      for (const [theta, label] of [
+        [a.extended, 'E'],
+        [a.folded, 'F']
+      ]) {
+        const limit = solve(p, theta);
+        line(
+          [[0, 0], [limit.bx, limit.by], [limit.x, limit.y]],
+          '#71819f', 1.5, [5, 5]
+        );
 
-  const originX = canvas.width / 2 + panX;
-  const originY = canvas.height / 2 + panY;
+        const end = screen(limit.x, limit.y);
+        ctx.beginPath();
+        ctx.strokeStyle = '#b8c5df';
+        ctx.lineWidth = 1.5;
+        ctx.arc(end.x, end.y, 9, 0, TAU);
+        ctx.stroke();
 
-  ctx.save();
-  ctx.translate(originX, originY);
-  ctx.rotate(-groundRad);
+        text(label, limit.x, limit.y, colours.text, 0, 58);
+      }
+    }
+  }
 
-  // 1. Coupler Paths
-  couplerPoints.forEach((cp, idx) => {
+  // Coupler paths, with breaks across inaccessible configurations.
+  state.couplers.forEach((cp, index) => {
     if (!cp.showPath) return;
 
     ctx.beginPath();
-    ctx.strokeStyle = couplerColors[idx % couplerColors.length];
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = couplerColours[index];
+    ctx.lineWidth = 1.3;
     ctx.setLineDash([3, 3]);
 
-    let first = true;
-    for (let deg = 0; deg <= 360; deg += 2) {
-      const rad = deg * Math.PI / 180;
-      const stepSol = solveLocalKinematics(crankR, rodL, offsetE, offsetAngleRad, rad);
-      if (stepSol) {
-        const pt = getCouplerPointPos(stepSol.Bx, stepSol.By, stepSol.Dx, stepSol.Dy, cp.dist, cp.angleDeg);
-        if (first) { ctx.moveTo(pt.x, pt.y); first = false; }
-        else { ctx.lineTo(pt.x, pt.y); }
+    let connected = false;
+
+    for (let d = 0; d <= 360; d += 1) {
+      const solution = solve(p, rad(d));
+
+      if (!solution) {
+        connected = false;
+        continue;
       }
+
+      const angle = solution.rodAngle + rad(cp.angle);
+      const point = screen(
+        solution.bx + cp.distance * Math.cos(angle),
+        solution.by + cp.distance * Math.sin(angle)
+      );
+
+      if (!connected) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+
+      connected = true;
     }
+
     ctx.stroke();
     ctx.setLineDash([]);
   });
 
-  // 2. Stroke Range Line & End Caps
-  ctx.strokeStyle = '#f26d7d';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(xMinPt.x, xMinPt.y);
-  ctx.lineTo(xMaxPt.x, xMaxPt.y);
-  ctx.stroke();
+  const s = solve(p);
 
-  const capLength = 8;
-  ctx.beginPath();
-  ctx.moveTo(xMinPt.x, xMinPt.y - capLength); ctx.lineTo(xMinPt.x, xMinPt.y + capLength);
-  ctx.moveTo(xMaxPt.x, xMaxPt.y - capLength); ctx.lineTo(xMaxPt.x, xMaxPt.y + capLength);
-  ctx.stroke();
+  joint(0, 0, colours.red, 7);
+  text('A', 0, 0, colours.text, -16, 17);
 
-  const midStroke = { x: (xMinPt.x + xMaxPt.x) / 2, y: (xMinPt.y + xMaxPt.y) / 2 };
-  drawUnrotatedText(`Stroke: ${strokeLength.toFixed(1)}`, midStroke.x, midStroke.y + 24, '16px sans-serif', '#f26d7d');
-
-  // 3. Offset vectors r1 and r4
-  if (offsetE > 0) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 4]);
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(P1x, P1y);
-    ctx.stroke();
-
-    drawUnrotatedText(`r1: ${offsetE.toFixed(1)}`, P1x / 2 - 15, P1y / 2, '16px sans-serif', '#9fb0d3');
+  if (!s) {
+    text('Current crank position is inaccessible', 0, 0, colours.red, 0, -35);
+    return;
   }
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  line([[0, p.h], [s.x, p.h]], '#9aa9c3', 1, [4, 4]);
+  text(`r₄ = ${s.x.toFixed(2)}`, s.x / 2, p.h, colours.muted, 0, -17);
+
+  line([[0, 0], [s.bx, s.by]], colours.amber, 6);
+  line([[s.bx, s.by], [s.x, s.y]], colours.blue, 5);
+
+  text('r₂', s.bx / 2, s.by / 2, colours.amber, 0, -15);
+  text(
+    'r₃',
+    (s.bx + s.x) / 2, (s.by + s.y) / 2,
+    colours.blue, 0, -17
+  );
+
+  // Slider block rotates with the guide.
+  const slider = screen(s.x, s.y);
+  ctx.save();
+  ctx.translate(slider.x, slider.y);
+  ctx.rotate(-p.ground);
+  ctx.fillStyle = 'rgba(88,209,159,.60)';
+  ctx.strokeStyle = colours.green;
+  ctx.lineWidth = 2;
+  ctx.fillRect(-25, -13, 50, 26);
+  ctx.strokeRect(-25, -13, 50, 26);
+  ctx.restore();
+
+  joint(s.bx, s.by, colours.text);
+  joint(s.x, s.y, colours.text);
+
+  text('B', s.bx, s.by, colours.text, 0, -17);
+  text('Slider C', s.x, s.y, colours.green, 0, -33);
+
+  // Transmission angle: from local +y normal to C -> B.
+  const gamma = Math.acos(clamp((s.by - p.h) / p.l, -1, 1));
+  const start = -(p.ground + Math.PI / 2);
+  const end = start - gamma;
+  const arcRadius = 31;
+
+  ctx.beginPath();
+  ctx.strokeStyle = colours.amber;
   ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 4]);
+  ctx.arc(slider.x, slider.y, arcRadius, start, end, true);
+  ctx.stroke();
+
+  const normal = screen(s.x, s.y + 45 / state.zoom);
   ctx.beginPath();
-  ctx.moveTo(P1x, P1y);
-  ctx.lineTo(Dx, Dy);
+  ctx.setLineDash([3, 3]);
+  ctx.moveTo(slider.x, slider.y);
+  ctx.lineTo(normal.x, normal.y);
   ctx.stroke();
   ctx.setLineDash([]);
 
-  drawUnrotatedText(`r4: ${dPath.toFixed(1)}`, (P1x + Dx) / 2, (P1y + Dy) / 2 - 12, '16px sans-serif', '#9fb0d3');
+  text(
+    `γ = ${deg(gamma).toFixed(1)}°`,
+    s.x, s.y, colours.amber, 58, 30
+  );
 
-  // 4. Ground Guide Track
-  ctx.strokeStyle = '#35405c';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([8, 6]);
-  ctx.beginPath();
-  ctx.moveTo(P1x - 80, P1y);
-  ctx.lineTo(xMaxPt.x + 80, P1y);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  state.couplers.forEach((cp, index) => {
+    const angle = s.rodAngle + rad(cp.angle);
+    const x = s.bx + cp.distance * Math.cos(angle);
+    const y = s.by + cp.distance * Math.sin(angle);
+    const colour = couplerColours[index];
 
-  // Joint A
-  ctx.fillStyle = '#f26d7d';
-  ctx.beginPath();
-  ctx.arc(0, 0, 7, 0, Math.PI * 2);
-  ctx.fill();
-  drawUnrotatedText('A', -16, 18, 'bold 18px sans-serif', '#ffffff');
+    line([[s.bx, s.by], [x, y]], colour, 1);
+    joint(x, y, colour);
+    text(String.fromCharCode(69 + index), x, y, colour, 13, -9);
+  });
+}
 
-  // 5. Crank Link
-  ctx.strokeStyle = '#f0b35a';
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(Bx, By);
-  ctx.stroke();
-  drawUnrotatedText(`Crank r2 (${crankDegGlobal.toFixed(0)}°)`, Bx / 2 - 15, By / 2 - 12, 'bold 18px sans-serif', '#f0b35a');
+function drawAngleCircle(p, a) {
+  const { width, height } = prepareCanvas(circle, circleCtx);
+  const c = circleCtx;
 
-  // 6. Connecting Rod Link
-  ctx.strokeStyle = '#4f74b8';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(Bx, By);
-  ctx.lineTo(Dx, Dy);
-  ctx.stroke();
-  drawUnrotatedText(`Connecting Rod r3 (${rodDegGlobal.toFixed(0)}°)`, (Bx + Dx) / 2, (By + Dy) / 2 - 14, '18px sans-serif', '#6ea8ff');
+  if (!a.valid) {
+    c.fillStyle = colours.muted;
+    c.font = '12px system-ui';
+    c.textAlign = 'center';
+    c.fillText('Full-cycle angle distribution unavailable', width / 2, height / 2);
+    return;
+  }
 
-  // 7. Transmission Angle Arc at Joint C/D
-  ctx.strokeStyle = '#f0b35a';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  const startAng = Math.PI;
-  const endAng = Math.atan2(By - Dy, Bx - Dx);
-  ctx.arc(Dx, Dy, 25, startAng, endAng, (By - Dy) > 0);
-  ctx.stroke();
-  drawUnrotatedText(`γ=${transmissionAngleDeg.toFixed(1)}°`, Dx - 40, Dy - 8, '13px monospace', '#f0b35a');
+  const cx = width / 2;
+  const cy = 119;
+  const radius = Math.min(84, width / 2 - 40);
 
-  // 8. Active Coupler Points
-  couplerPoints.forEach((cp, idx) => {
-    const pt = getCouplerPointPos(Bx, By, Dx, Dy, cp.dist, cp.angleDeg);
-    const col = couplerColors[idx % couplerColors.length];
-    const ptName = getPointName(idx);
+  function point(theta, distance) {
+    const global = theta + p.ground;
+    return {
+      x: cx + distance * Math.cos(global),
+      y: cy - distance * Math.sin(global)
+    };
+  }
 
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(Bx, By);
-    ctx.lineTo(pt.x, pt.y);
-    ctx.stroke();
+  function sector(start, sweep, outward) {
+    const colour = strokeColour(outward, a);
+    const startAngle = -(start + p.ground);
+    const endAngle = -(start + p.direction * sweep + p.ground);
 
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
-    ctx.fill();
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.arc(cx, cy, radius, startAngle, endAngle, p.direction > 0);
+    c.closePath();
+    c.fillStyle = colour;
+    c.globalAlpha = .17;
+    c.fill();
+    c.globalAlpha = 1;
 
-    drawUnrotatedText(`${ptName}`, pt.x + 10, pt.y + 4, 'bold 16px sans-serif', col, 'left');
+    c.beginPath();
+    c.strokeStyle = colour;
+    c.lineWidth = 13;
+    c.arc(cx, cy, radius, startAngle, endAngle, p.direction > 0);
+    c.stroke();
+
+    const mid = start + p.direction * sweep / 2;
+    const global = mid + p.ground;
+    const pos = point(mid, radius);
+    const tx = -p.direction * Math.sin(global);
+    const ty = -p.direction * Math.cos(global);
+
+    c.beginPath();
+    c.moveTo(pos.x + 9 * tx, pos.y + 9 * ty);
+    c.lineTo(pos.x - 6 * tx - 5 * ty, pos.y - 6 * ty + 5 * tx);
+    c.lineTo(pos.x - 6 * tx + 5 * ty, pos.y - 6 * ty - 5 * tx);
+    c.closePath();
+    c.fillStyle = colours.background;
+    c.fill();
+  }
+
+  sector(a.folded, a.outwardSweep, true);
+  sector(a.extended, a.inwardSweep, false);
+
+  for (const [theta, label] of [
+    [a.extended, 'E'],
+    [a.folded, 'F']
+  ]) {
+    const end = point(theta, radius + 8);
+    const labelPoint = point(theta, radius + 26);
+
+    c.beginPath();
+    c.strokeStyle = '#bac7df';
+    c.lineWidth = 1;
+    c.moveTo(cx, cy);
+    c.lineTo(end.x, end.y);
+    c.stroke();
+
+    c.fillStyle = colours.text;
+    c.font = 'bold 14px system-ui';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(label, labelPoint.x, labelPoint.y);
+  }
+
+  const pointer = point(p.theta, radius - 14);
+  c.beginPath();
+  c.strokeStyle = 'white';
+  c.lineWidth = 2;
+  c.moveTo(cx, cy);
+  c.lineTo(pointer.x, pointer.y);
+  c.stroke();
+
+  c.beginPath();
+  c.fillStyle = 'white';
+  c.arc(pointer.x, pointer.y, 4, 0, TAU);
+  c.fill();
+
+  c.beginPath();
+  c.fillStyle = colours.background;
+  c.arc(cx, cy, 35, 0, TAU);
+  c.fill();
+
+  c.fillStyle = colours.text;
+  c.textAlign = 'center';
+  c.font = '12px system-ui';
+  c.fillText('Q', cx, cy - 12);
+  c.font = 'bold 19px system-ui';
+  c.fillText(a.Q.toFixed(3), cx, cy + 10);
+
+  function legend(y, outward, sweep) {
+    c.fillStyle = strokeColour(outward, a);
+    c.fillRect(12, y - 5, 14, 10);
+    c.font = '11px system-ui';
+    c.textAlign = 'left';
+    c.fillText(
+      `${outward ? '+r₄: F → E' : '−r₄: E → F'}   ` +
+      `${deg(sweep).toFixed(3)}°`,
+      35, y
+    );
+  }
+
+  legend(244, true, a.outwardSweep);
+  legend(269, false, a.inwardSweep);
+}
+
+function drawPlot(p, a) {
+  const { width, height } = prepareCanvas(plot, plotCtx);
+  const c = plotCtx;
+  if (!a.valid) return;
+
+  const left = 44;
+  const right = width - 19;
+  const top = 30;
+  const bottom = height - 43;
+  const split = a.outwardSweep / TAU;
+
+  const X = f => left + f * (right - left);
+  const Y = x => bottom - (x - a.minimum) / a.stroke * (bottom - top);
+
+  for (const outward of [true, false]) {
+    const from = outward ? 0 : split;
+    const to = outward ? split : 1;
+
+    c.fillStyle = strokeColour(outward, a);
+    c.globalAlpha = .09;
+    c.fillRect(X(from), top, X(to) - X(from), bottom - top);
+    c.globalAlpha = 1;
+
+    c.beginPath();
+    c.strokeStyle = strokeColour(outward, a);
+    c.lineWidth = 2;
+
+    for (let i = 0; i <= 180; i++) {
+      const f = from + (to - from) * i / 180;
+      const theta = a.folded + p.direction * TAU * f;
+      const s = solve(p, theta);
+      if (i === 0) c.moveTo(X(f), Y(s.x));
+      else c.lineTo(X(f), Y(s.x));
+    }
+    c.stroke();
+  }
+
+  c.strokeStyle = colours.guide;
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(left, top);
+  c.lineTo(left, bottom);
+  c.lineTo(right, bottom);
+  c.stroke();
+
+  c.setLineDash([3, 3]);
+  c.beginPath();
+  c.moveTo(X(split), top);
+  c.lineTo(X(split), bottom);
+  c.stroke();
+  c.setLineDash([]);
+
+  const current = solve(p);
+  const fraction = phaseOf(p, a).travel / TAU;
+
+  c.fillStyle = 'white';
+  c.beginPath();
+  c.arc(X(fraction), Y(current.x), 4, 0, TAU);
+  c.fill();
+
+  c.fillStyle = colours.muted;
+  c.font = '10px system-ui';
+  c.textAlign = 'left';
+  c.fillText('Displacement from folded position', left, 14);
+
+  c.textAlign = 'right';
+  c.fillText(a.stroke.toFixed(1), left - 6, top + 4);
+  c.fillText('0', left - 6, bottom + 3);
+
+  c.textAlign = 'center';
+  c.fillText('0', left, bottom + 16);
+  c.fillText(a.outwardTime.toFixed(2), X(split), bottom + 16);
+  c.fillText(a.period.toFixed(2), right, bottom + 16);
+  c.fillText('Time (s)', (left + right) / 2, height - 7);
+}
+
+function updateReadouts(p, a) {
+  $('angleLabel').textContent = deg(p.theta).toFixed(2) + '°';
+
+  const timingIds = [
+    'qExt', 'qFold', 'delta', 'thetaExt', 'thetaFold',
+    'outSweep', 'inSweep', 'outTime', 'inTime',
+    'outMinimum', 'outStroke', 'outPeriod'
+  ];
+
+  $('goExtended').disabled = !a.valid;
+  $('goFolded').disabled = !a.valid;
+
+  if (!a.valid) {
+    timingIds.forEach(id => $(id).textContent = '—');
+    $('qValue').textContent = '—';
+    $('phase').textContent = 'Full-cycle timing unavailable';
+    $('phase').style.color = colours.red;
+    $('status').textContent = a.reason;
+    $('status').className = 'status error';
+  } else {
+    const angle = value => deg(value).toFixed(3) + '°';
+    $('qExt').textContent = angle(a.qExt);
+    $('qFold').textContent = angle(a.qFold);
+    $('delta').textContent = angle(a.delta);
+
+    $('thetaExt').textContent = angle(wrap(a.extended + p.ground));
+    $('thetaFold').textContent = angle(wrap(a.folded + p.ground));
+
+    $('outSweep').textContent = angle(a.outwardSweep);
+    $('inSweep').textContent = angle(a.inwardSweep);
+    $('outTime').textContent = a.outwardTime.toFixed(3) + ' s';
+    $('inTime').textContent = a.inwardTime.toFixed(3) + ' s';
+
+    $('qValue').textContent = a.Q.toFixed(6);
+    $('outMinimum').textContent = a.minimum.toFixed(3);
+    $('outStroke').textContent = a.stroke.toFixed(3);
+    $('outPeriod').textContent = a.period.toFixed(3) + ' s';
+
+    const phase = phaseOf(p, a);
+
+    if (phase.atLimit) {
+      $('phase').textContent = 'Dead centre: slider velocity = 0';
+    } else {
+      const direction = phase.outward ? '+r₄: F → E' : '−r₄: E → F';
+      const speed = a.equal
+        ? 'equal stroke times'
+        : phase.outward === a.outwardSlow
+          ? 'slow stroke'
+          : 'fast stroke / quick return';
+
+      $('phase').textContent = `${direction} — ${speed}`;
+    }
+
+    $('phase').style.color = strokeColour(phase.outward, a);
+    $('status').className = 'status';
+    $('status').textContent =
+      'Full rotation feasible. Right-hand assembly branch. ' +
+      'Constant crank speed assumed.';
+  }
+
+  const measurementIds = [
+    'outCrank', 'outRod', 'outGamma', 'outRodLength', 'outPosition'
+  ];
+
+  const geometryFinite = [
+    p.r, p.l, p.h, p.theta, p.ground
+  ].every(Number.isFinite);
+
+  const s = geometryFinite && p.r > 0 && p.l > 0 ? solve(p) : null;
+
+  if (!s) {
+    measurementIds.forEach(id => $(id).textContent = '—');
+    return;
+  }
+
+  const gamma = Math.acos(clamp((s.by - p.h) / p.l, -1, 1));
+
+  $('outCrank').textContent =
+    deg(wrap(p.theta + p.ground)).toFixed(2) + '°';
+  $('outRod').textContent =
+    deg(wrap(s.rodAngle + p.ground)).toFixed(2) + '°';
+  $('outGamma').textContent = deg(gamma).toFixed(2) + '°';
+  $('outRodLength').textContent =
+    Math.hypot(s.x - s.bx, s.y - s.by).toFixed(3);
+  $('outPosition').textContent = s.x.toFixed(3);
+}
+
+function render() {
+  const p = readParameters();
+  const a = analyse(p);
+  updateReadouts(p, a);
+  drawMechanism(p, a);
+  drawAngleCircle(p, a);
+  drawPlot(p, a);
+}
+
+/* Animation uses elapsed time, not a fixed increment per frame. */
+
+function pause() {
+  state.playing = false;
+  state.lastTime = null;
+  cancelAnimationFrame(state.animation);
+  $('play').textContent = 'Play animation';
+  $('play').classList.remove('active');
+}
+
+function animate(timestamp) {
+  if (!state.playing) return;
+
+  const p = readParameters();
+  const a = analyse(p);
+
+  if (!a.valid) {
+    pause();
+    render();
+    return;
+  }
+
+  if (state.lastTime !== null) {
+    const dt = (timestamp - state.lastTime) / 1000;
+    const next = wrap(
+      deg(p.theta) + p.direction * p.rpm * 6 * dt,
+      360
+    );
+    $('crankAngle').value = next.toFixed(5);
+  }
+
+  state.lastTime = timestamp;
+  render();
+  state.animation = requestAnimationFrame(animate);
+}
+
+$('play').addEventListener('click', () => {
+  if (state.playing) {
+    pause();
+    return;
+  }
+
+  if (!analyse(readParameters()).valid) {
+    render();
+    return;
+  }
+
+  state.playing = true;
+  state.lastTime = null;
+  $('play').textContent = 'Pause animation';
+  $('play').classList.add('active');
+  state.animation = requestAnimationFrame(animate);
+});
+
+document.addEventListener('visibilitychange', () => {
+  state.lastTime = null;
+});
+
+function goToLimit(which) {
+  const a = analyse(readParameters());
+  if (!a.valid) return;
+
+  pause();
+  $('crankAngle').value =
+    deg(which === 'extended' ? a.extended : a.folded).toFixed(5);
+  render();
+}
+
+$('goExtended').addEventListener('click', () => goToLimit('extended'));
+$('goFolded').addEventListener('click', () => goToLimit('folded'));
+
+/* Presets */
+
+function preset(offset, angle = 80) {
+  pause();
+  $('crankLen').value = 200;
+  $('rodLen').value = 400;
+  $('offset').value = offset;
+  $('groundAngle').value = 0;
+  $('crankAngle').value = angle;
+  $('rpm').value = 6;
+  $('direction').value = '1';
+  fitView();
+}
+
+$('inlinePreset').addEventListener('click', () => preset(0));
+$('sheetPreset').addEventListener('click', () => preset(50));
+$('offsetPreset').addEventListener('click', () => preset(150));
+
+$('flipOffset').addEventListener('click', () => {
+  $('offset').value = -Number($('offset').value);
+  render();
+});
+
+/* Pan and zoom */
+
+scene.addEventListener('pointerdown', event => {
+  if (event.button !== 0) return;
+  state.pointer = {
+    id: event.pointerId,
+    x: event.clientX,
+    y: event.clientY
+  };
+  scene.setPointerCapture(event.pointerId);
+});
+
+scene.addEventListener('pointermove', event => {
+  if (!state.pointer || state.pointer.id !== event.pointerId) return;
+
+  state.panX += event.clientX - state.pointer.x;
+  state.panY += event.clientY - state.pointer.y;
+  state.pointer.x = event.clientX;
+  state.pointer.y = event.clientY;
+  render();
+});
+
+function releasePointer(event) {
+  if (state.pointer && state.pointer.id === event.pointerId) {
+    state.pointer = null;
+  }
+}
+
+scene.addEventListener('pointerup', releasePointer);
+scene.addEventListener('pointercancel', releasePointer);
+scene.addEventListener('lostpointercapture', () => {
+  state.pointer = null;
+});
+
+scene.addEventListener('wheel', event => {
+  event.preventDefault();
+
+  const rect = scene.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+
+  const oldZoom = state.zoom;
+  const newZoom = clamp(
+    oldZoom * Math.exp(-event.deltaY * .001),
+    .02, 20
+  );
+
+  const ratio = newZoom / oldZoom;
+  const centerX = scene.clientWidth / 2;
+  const centerY = scene.clientHeight / 2;
+
+  state.panX =
+    mouseX - centerX - ratio * (mouseX - centerX - state.panX);
+  state.panY =
+    mouseY - centerY - ratio * (mouseY - centerY - state.panY);
+  state.zoom = newZoom;
+
+  render();
+}, { passive: false });
+
+function fitView() {
+  const p = readParameters();
+
+  if (![p.r, p.l, p.h, p.ground].every(Number.isFinite) ||
+      p.r <= 0 || p.l <= 0) {
+    render();
+    return;
+  }
+
+  const points = [[0, 0], [0, p.h]];
+
+  for (let d = 0; d <= 360; d += 3) {
+    const theta = rad(d);
+    points.push([p.r * Math.cos(theta), p.r * Math.sin(theta)]);
+
+    const s = solve(p, theta);
+    if (s) points.push([s.x, s.y]);
+  }
+
+  const cos = Math.cos(p.ground);
+  const sin = Math.sin(p.ground);
+  const rotated = points.map(([x, y]) => [
+    x * cos - y * sin,
+    x * sin + y * cos
+  ]);
+
+  const xs = rotated.map(v => v[0]);
+  const ys = rotated.map(v => v[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  const availableWidth = Math.max(40, scene.clientWidth - 150);
+  const availableHeight = Math.max(40, scene.clientHeight - 170);
+
+  state.zoom = clamp(
+    Math.min(
+      availableWidth / Math.max(1, maxX - minX),
+      availableHeight / Math.max(1, maxY - minY)
+    ),
+    .02, 20
+  );
+
+  state.panX = -state.zoom * (minX + maxX) / 2;
+  state.panY = state.zoom * (minY + maxY) / 2;
+  render();
+}
+
+$('fitView').addEventListener('click', fitView);
+
+$('resetView').addEventListener('click', () => {
+  state.panX = 0;
+  state.panY = 0;
+  state.zoom = 1;
+  render();
+});
+
+/* Coupler controls */
+
+function renderCouplers() {
+  const container = $('couplerList');
+  container.innerHTML = '';
+
+  state.couplers.forEach((point, index) => {
+    const item = document.createElement('div');
+    item.className = 'coupler-item';
+
+    item.innerHTML = `
+      <div class="coupler-head">
+        <span style="color:${couplerColours[index]}">
+          Point ${String.fromCharCode(69 + index)}
+        </span>
+        <button class="secondary" data-path="${index}">
+          ${point.showPath ? 'Path on' : 'Path off'}
+        </button>
+        <button class="danger" data-delete="${index}">Remove</button>
+      </div>
+      <label>
+        Distance from B
+        <input type="number" step="5"
+          value="${point.distance}"
+          data-index="${index}" data-field="distance">
+      </label>
+      <label>
+        Angle from link 3 (°)
+        <input type="number" step="5"
+          value="${point.angle}"
+          data-index="${index}" data-field="angle">
+      </label>
+    `;
+
+    container.appendChild(item);
   });
 
-  // Joint B
-  ctx.fillStyle = '#edf2ff';
-  ctx.beginPath();
-  ctx.arc(Bx, By, 5, 0, Math.PI * 2);
-  ctx.fill();
-  drawUnrotatedText('B', Bx, By - 14, 'bold 18px sans-serif', '#ffffff');
-
-  // Joint C/D Pin
-  ctx.beginPath();
-  ctx.arc(Dx, Dy, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 9. Slider Block
-  const blockW = 50, blockH = 26;
-  ctx.fillStyle = 'rgba(88, 209, 159, 0.8)';
-  ctx.strokeStyle = '#58d19f';
-  ctx.lineWidth = 2;
-  ctx.fillRect(Dx - blockW / 2, Dy - blockH / 2, blockW, blockH);
-  ctx.strokeRect(Dx - blockW / 2, Dy - blockH / 2, blockW, blockH);
-
-  drawUnrotatedText(`Slider (C/D)`, Dx, Dy - blockH / 2 - 14, 'bold 18px sans-serif', '#58d19f');
-
-  ctx.restore();
+  $('addCoupler').disabled = state.couplers.length >= 5;
 }
 
-canvas.addEventListener('mousedown', (e) => {
-  isPanning = true;
-  startPanX = e.clientX - panX;
-  startPanY = e.clientY - startPanY;
+$('addCoupler').addEventListener('click', () => {
+  if (state.couplers.length >= 5) return;
+
+  state.couplers.push({
+    distance: 100,
+    angle: 30 * state.couplers.length,
+    showPath: true
+  });
+
+  renderCouplers();
+  render();
 });
 
-window.addEventListener('mousemove', (e) => {
-  if (isPanning) {
-    panX = e.clientX - startPanX;
-    panY = e.clientY - startPanY;
-    draw();
+$('clearCouplers').addEventListener('click', () => {
+  state.couplers = [];
+  renderCouplers();
+  render();
+});
+
+$('couplerList').addEventListener('input', event => {
+  const target = event.target;
+  if (!target.matches('input[data-index]')) return;
+
+  const value = Number(target.value);
+  if (!Number.isFinite(value)) return;
+
+  state.couplers[Number(target.dataset.index)][target.dataset.field] = value;
+  render();
+});
+
+$('couplerList').addEventListener('click', event => {
+  const target = event.target.closest('button');
+  if (!target) return;
+
+  if (target.dataset.delete !== undefined) {
+    state.couplers.splice(Number(target.dataset.delete), 1);
+  } else if (target.dataset.path !== undefined) {
+    const point = state.couplers[Number(target.dataset.path)];
+    point.showPath = !point.showPath;
   }
+
+  renderCouplers();
+  render();
 });
 
-window.addEventListener('mouseup', () => { isPanning = false; });
+/* Input and resize handling */
 
-resetPanBtn.addEventListener('click', () => {
-  panX = 0;
-  panY = 0;
-  draw();
+[
+  'groundAngle', 'crankLen', 'rodLen', 'offset',
+  'crankAngle', 'rpm', 'direction', 'showLimits'
+].forEach(id => {
+  $(id).addEventListener('input', () => {
+    if (state.playing && !analyse(readParameters()).valid) pause();
+    render();
+  });
 });
 
-function animate() {
-  if (!isPlaying) return;
-  let val = (parseFloat(crankAngleInput.value) + 1.5) % 360;
-  crankAngleInput.value = val;
-  draw();
-  animId = requestAnimationFrame(animate);
-}
-
-[groundAngleInput, offsetAngleSelect, crankLenInput, rodLenInput, offsetInput, crankAngleInput].forEach(input => {
-  input.addEventListener('input', draw);
+let resizeFrame = null;
+const observer = new ResizeObserver(() => {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(render);
 });
 
-togglePlayBtn.addEventListener('click', () => {
-  isPlaying = !isPlaying;
-  togglePlayBtn.textContent = isPlaying ? "Pause Animation" : "Play Animation";
-  togglePlayBtn.classList.toggle('active', isPlaying);
-  if (isPlaying) animate();
-  else cancelAnimationFrame(animId);
-});
+observer.observe($('canvas-container'));
+observer.observe($('angleCircle'));
+observer.observe($('motionPlot'));
 
-renderCouplerControls();
-resize();
+renderCouplers();
+requestAnimationFrame(fitView);
 </script>
 </body>
 </html>
